@@ -33,8 +33,10 @@ const (
 )
 
 var (
-	usgRe     = regexp.MustCompile(`(Usage\s+.*\n)`)
-	standbyRe = regexp.MustCompile(`(Standby\s+.*\n)`)
+	usgRe        = regexp.MustCompile(`(Usage\s+.*\n)`)
+	standbyRe    = regexp.MustCompile(`(Standby\s+.*\n)`)
+	batPercentRe = regexp.MustCompile(`((AM|PM).*\d%)`)
+	statTimeRe   = regexp.MustCompile(`(.*(\s)(AM|PM))`)
 )
 
 func explodeTypeAndVal(strDur string) (DurType, int, error) {
@@ -72,15 +74,26 @@ func extractTimes(timesArr []string) (time.Duration, error) {
 	return durData, nil
 }
 func extractBatteryTimes(exp string) (time.Duration, time.Duration, error) {
-	var usgStr, standbyStr string
+	var usgStr, standbyStr, batPercentStr, statTimeStr string
 	for _, match := range usgRe.FindAllString(exp, -1) {
 		usgStr = strings.TrimSpace(strings.Split(match, "Usage")[1])
 	}
 	for _, match := range standbyRe.FindAllString(exp, -1) {
 		standbyStr = strings.TrimSpace(strings.Split(match, "Standby")[1])
 	}
+	for _, match := range batPercentRe.FindAllString(exp, -1) {
+		filter := strings.Split(match, " ")
+		batPercentStr = strings.TrimSpace(filter[len(filter)-1])
+	}
+	for _, match := range statTimeRe.FindAllString(exp, -1) {
+		fmt.Println(fmt.Sprintf("Stat collection rawtime is (%v)", match))
+		filter := strings.Split(match, " ")
+		statTimeStr = strings.TrimSpace(filter[len(filter)-1])
+	}
 	fmt.Println(fmt.Sprintf("Usage rawtimes are (%v)", usgStr))
 	fmt.Println(fmt.Sprintf("Standby rawtimes are (%v)", standbyStr))
+	fmt.Println(fmt.Sprintf("Battery percentage is (%v)", batPercentStr))
+	fmt.Println(fmt.Sprintf("Stat collection time is (%v)", statTimeStr))
 	usgdata := strings.Split(usgStr, ",")
 	standbydata := strings.Split(standbyStr, ",")
 	usgdur, err := extractTimes(usgdata)
@@ -89,11 +102,15 @@ func extractBatteryTimes(exp string) (time.Duration, time.Duration, error) {
 }
 
 func ExtractFeatures(imgPath string) (*model.BatteryStats, error) {
-	out, err := ocr.Src(imgPath).Out()
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	out := gotes.Must(gotes.Params{
+		Src:       imgPath,
+		Languages: "eng",
+	})
+	//out, err := ocr.Src(imgPath).Out()
+	//if err != nil {
+	//		log.Fatal(err)
+	//		return nil, err
+	//	}
 	fmt.Println(fmt.Sprintf("****** Raw data is *********\n%s", out))
 	//TO DO Use ocr to extract data nd the construct the BatterStats out of it
 	usgdata, standbydur, err := extractBatteryTimes(out)

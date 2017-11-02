@@ -8,6 +8,9 @@ import (
 
 	"github.com/iBatStat/extractor/db"
 	myHttp "github.com/iBatStat/extractor/http"
+
+	"fmt"
+	san "github.com/iBatStat/extractor/sanitizer"
 )
 
 func main() {
@@ -36,12 +39,16 @@ func main() {
 	http.Handle("/uploadStat", myHttp.AuthenticateHandlerFunc(http.HandlerFunc(myHttp.UploadImageHandlerFunc)))
 
 	log.Println("starting server")
+	checkExtraction()
 	log.Fatal(http.ListenAndServe(":8080", nil))
-	//	stat, err := san.ExtractFeatures("7splusBattery.jpeg")
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	} else {
-	//		db.DBAccess.Push(stat)
-	//		fmt.Println(fmt.Sprintf("****** Structured data is *********\n%s", *stat))
-	//	}
+}
+
+func checkExtraction() {
+	stat, err := san.ExtractFeatures("6sBattery.jpg")
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		db.DBAccess.Push(stat)
+		fmt.Println(fmt.Sprintf("****** Structured data is *********\n%s", *stat))
+	}
 }
